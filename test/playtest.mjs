@@ -179,6 +179,27 @@ async function main() {
     };
   });
 
+  // ---------------------------------------------------------------
+  // 7) PLAYER traversal: the physics world bounds must match the world
+  //    (a regression guard — they default to the canvas size, which would
+  //    trap the player in the top-left quarter), AND the player must be able
+  //    to actually walk from the entrance DOWN into the kitchen (cross y600).
+  // ---------------------------------------------------------------
+  report.scenarios.traversal = await get(async () => {
+    const s = game.scene.getScene('GameScene');
+    s._checkCatch = () => {}; s.ghost.update = () => {}; s.ghost.setPosition(1500, 120);
+    const wb = s.physics.world.bounds;
+    s.player.setPosition(285, 540); s.player.hidden = false; s.player.body.setVelocity(0, 0);
+    s._gatherInput = () => ({ up: false, down: true, left: false, right: false, sprint: false });
+    for (let i = 0; i < 140; i++) await new Promise(r => requestAnimationFrame(r));
+    s._gatherInput = () => ({ up: false, down: false, left: false, right: false, sprint: false });
+    return {
+      worldBoundsMatch: wb.width === MAP.world.width && wb.height === MAP.world.height,
+      boundsW: wb.width, boundsH: wb.height,
+      reachedKitchen: s.player.y > 720, endY: Math.round(s.player.y),
+    };
+  });
+
   await browser.close();
 
   // --- print report ---
@@ -200,6 +221,8 @@ async function main() {
     ['all targets reachable/valid', r.reachability.problems.length === 0],
     ['ghost crosses the house', r.navigation.reachedBasement],
     ['ghost never stalls', r.navigation.stuckFrames === 0],
+    ['physics bounds = world size', r.traversal.worldBoundsMatch],
+    ['player can reach the kitchen', r.traversal.reachedKitchen],
   ];
   log('VERDICTS:');
   for (const [name, ok] of v) log(`  ${ok ? '✅' : '❌'} ${name}`);

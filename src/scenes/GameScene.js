@@ -31,6 +31,12 @@ class GameScene extends Phaser.Scene {
     this._makeTextures();
     this._buildWorld();
 
+    // IMPORTANT: the Arcade physics world bounds default to the *game canvas*
+    // size (960x600), NOT the world size. Without this, `collideWorldBounds`
+    // traps the player in the top-left quarter of the map (they can't cross
+    // y=600 or x=960 — the kitchen/storage/basement/exit become unreachable).
+    this.physics.world.setBounds(0, 0, MAP.world.width, MAP.world.height);
+
     // Navigation grid (used by the ghost for pathing + line of sight).
     this.nav = new NavGrid(MAP.world.width, MAP.world.height, CONFIG.cell, MAP.walls, 14);
 
