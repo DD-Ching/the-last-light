@@ -22,11 +22,26 @@ class HidingSpot {
     const key = type === 'bed' ? 'bed' : 'closet';
     this.sprite = scene.add.image(x, y, key).setDepth(20);
 
-    // A faint outline that brightens when the player is near (set by scene).
-    this.glow = scene.add.image(x, y, key + 'Glow').setDepth(19).setAlpha(0);
+    // A soft glow drawn ABOVE the darkness so the spot is findable in the dark.
+    // Cyan = "safe / interactable" — distinct from gold keys and the red exit.
+    // It pulses gently, and turns bright white when the player is in range.
+    this.marker = scene.add.image(x, y, 'glow').setDepth(1150)
+      .setTint(0x6fd6ff).setDisplaySize(118, 122).setAlpha(0.6)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    // A crisp outline on top gives the glow a readable "object" shape.
+    this.ring = scene.add.image(x, y, key + 'Glow').setDepth(1151)
+      .setTint(0xbfeeff).setAlpha(0.75);
+    // Pulse alpha only (the marker's size is set via setDisplaySize, so we must
+    // not tween its scale or it would reset to the texture's full size).
+    scene.tweens.add({
+      targets: [this.marker, this.ring], alpha: '+=0.2',
+      duration: 950, yoyo: true, repeat: -1, ease: 'Sine.inOut',
+    });
   }
 
   setHighlight(on) {
-    this.glow.setAlpha(on ? 0.5 : 0);
+    const t = on ? 0xffffff : 0x73d7ff;
+    this.marker.setTint(t);
+    this.ring.setTint(on ? 0xffffff : 0x9fe4ff);
   }
 }

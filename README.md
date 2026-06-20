@@ -22,6 +22,12 @@ locked exit.
 
 On touch devices, an on-screen joystick and buttons appear automatically.
 
+**Reading the dark:** the house is pitch black, but a few things glow faintly
+through it so you're never stuck on something you can't see — **cyan** beacons
+mark hiding spots, the **red** beacon (turns **green** when unlocked) marks the
+exit, and furniture has a faint gold outline. Keys still must be found with your
+flashlight.
+
 ## Run it locally
 
 The game uses plain `<script>` tags, so it works **even by double-clicking

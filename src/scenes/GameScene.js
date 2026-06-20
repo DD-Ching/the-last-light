@@ -184,30 +184,46 @@ class GameScene extends Phaser.Scene {
     const { width, height } = MAP.world;
     // Floor.
     this.add.rectangle(0, 0, width, height, 0x14171c).setOrigin(0).setDepth(-10);
-    // Faint room labels.
+    // Room labels — drawn ABOVE the darkness (faint) so you can orient yourself.
     MAP.roomLabels.forEach(r =>
       this.add.text(r.x, r.y, r.text, {
-        fontFamily: 'monospace', fontSize: '14px', color: '#2c3340',
-      }).setOrigin(0.5).setDepth(-5));
+        fontFamily: 'monospace', fontSize: '14px', color: '#5b6675',
+      }).setOrigin(0.5).setDepth(1090).setAlpha(0.16));
 
-    // Walls (solid). Furniture is just differently coloured.
+    // Walls (solid). Furniture is lighter/warmer so it stands out from the floor.
     this.wallGroup = this.physics.add.staticGroup();
     MAP.walls.forEach(w => {
       const isFurn = w.type === 'furniture';
-      const rect = this.add.rectangle(w.x, w.y, w.w, w.h, isFurn ? 0x2a2118 : 0x363c47)
+      const rect = this.add.rectangle(w.x, w.y, w.w, w.h, isFurn ? 0x4a3a26 : 0x363c47)
         .setOrigin(0).setDepth(isFurn ? 11 : 10);
-      if (!isFurn) rect.setStrokeStyle(1, 0x4a515f);
+      rect.setStrokeStyle(isFurn ? 2 : 1, isFurn ? 0x8a6a3a : 0x4a515f);
       this.physics.add.existing(rect, true); // static body
       this.wallGroup.add(rect);
     });
 
-    // Exit door panel (locked until 3 keys).
+    // Faint edges drawn ABOVE the darkness so solid obstacles are never truly
+    // invisible (no more bumping into furniture you can't see). Furniture
+    // glows a little; perimeter/divider walls are only a whisper to stay moody.
+    const edges = this.add.graphics().setDepth(1100);
+    MAP.walls.forEach(w => {
+      const furn = w.type === 'furniture';
+      edges.lineStyle(furn ? 3 : 1, furn ? 0xb08a4e : 0x49555f, furn ? 0.55 : 0.1);
+      edges.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
+    });
+
+    // Exit door panel (locked until 3 keys) + an above-darkness marker so it's
+    // findable from across the room (turns green once unlocked).
     const ex = MAP.exit.panel;
     this.exitPanel = this.add.rectangle(ex.x, ex.y, ex.w, ex.h, 0x5a2222)
       .setOrigin(0).setDepth(12).setStrokeStyle(3, 0x8a3333);
     this.exitLabel = this.add.text(ex.x + ex.w / 2, ex.y - 12, 'EXIT', {
       fontFamily: 'monospace', fontSize: '13px', color: '#c87070',
-    }).setOrigin(0.5).setDepth(12);
+    }).setOrigin(0.5).setDepth(1151);
+    this.exitMarker = this.add.image(MAP.exit.zone.x, MAP.exit.zone.y, 'glow')
+      .setDepth(1150).setAlpha(0.5).setTint(0xff5a5a).setDisplaySize(120, 140)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: this.exitMarker, alpha: 0.85, duration: 1000,
+      yoyo: true, repeat: -1, ease: 'Sine.inOut' });
 
     // Keys.
     this.keysGroup = this.physics.add.group();
@@ -305,6 +321,7 @@ class GameScene extends Phaser.Scene {
       this.exitPanel.setFillStyle(0x2f6a3a); // turns green
       this.exitPanel.setStrokeStyle(3, 0x5fd07a);
       this.exitLabel.setColor('#7fe0a0');
+      this.exitMarker.setTint(0x5fd07a); // marker goes green too
     }
   }
 
