@@ -1,0 +1,13 @@
+{
+  "name": "the-last-light",
+  "version": "0.1.0",
+  "private": true,
+  "description": "2D top-down horror ghost-tag game (Phaser 3)",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "playtest": "node test/playtest.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}

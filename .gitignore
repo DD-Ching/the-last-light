@@ -15,3 +15,7 @@ node_modules/
 
 # Original design brief (kept local)
 finishitpls.txt
+
+# Playtest report output
+test/last-report.txt
+test/*-report.json

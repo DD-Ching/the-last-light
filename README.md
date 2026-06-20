@@ -42,6 +42,18 @@ npx serve .
 
 > You need an internet connection the first time, because Phaser loads from a CDN.
 
+## Automated playtest
+
+An automated Playwright harness boots the game in a headless browser and checks
+movement, collision, ghost AI/navigation, pathfinding cost, reachability, and
+per-frame CPU. See [PLAYTEST.md](PLAYTEST.md) for the latest results.
+
+```bash
+npm install && npx playwright install chromium
+npm start                 # serve on :8000 (separate terminal)
+npm run playtest          # 11 checks
+```
+
 ## Deploy to GitHub Pages
 
 1. Push this folder to a GitHub repository.
