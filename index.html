@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>The Last Light</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #04050a;
+      overflow: hidden;
+      font-family: monospace;
+      /* Stop mobile browsers from scrolling/zooming on touch. */
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #game {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* Shown only if Phaser fails to load (e.g. opened with no internet). */
+    #fallback {
+      color: #c33;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      display: none;
+      padding: 0 24px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <div id="fallback">
+    Could not load the game engine (Phaser).<br />
+    Check your internet connection and reload.
+  </div>
+
+  <!-- Phaser 3 from CDN (UMD build -> attaches window.Phaser). -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <script>
+    if (!window.Phaser) document.getElementById('fallback').style.display = 'block';
+  </script>
+
+  <!-- Game source. Order matters: config + helpers first, scenes, then main. -->
+  <script src="src/config.js"></script>
+  <script src="src/audio/SoundManager.js"></script>
+  <script src="src/world/MapData.js"></script>
+  <script src="src/world/NavGrid.js"></script>
+  <script src="src/entities/Player.js"></script>
+  <script src="src/entities/Ghost.js"></script>
+  <script src="src/entities/CollectibleKey.js"></script>
+  <script src="src/entities/HidingSpot.js"></script>
+  <script src="src/input/TouchControls.js"></script>
+  <script src="src/ui/HUD.js"></script>
+  <script src="src/scenes/TitleScene.js"></script>
+  <script src="src/scenes/GameScene.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>

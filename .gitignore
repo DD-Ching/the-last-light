@@ -1,0 +1,17 @@
+# Test / tooling artifacts
+.playwright-mcp/
+*.png
+*.jpg
+*.jpeg
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Node (not used by the game, but just in case)
+node_modules/
+
+# Original design brief (kept local)
+finishitpls.txt
