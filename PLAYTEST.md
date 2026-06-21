@@ -11,7 +11,7 @@ npm start              # serve on :8000 (in another terminal)
 npm run playtest       # boots the game and runs all scenarios
 ```
 
-## Latest result — 11 / 11 checks pass
+## Latest result — 13 / 13 checks pass
 
 | Scenario | Metric | Result |
 | --- | --- | --- |
@@ -20,9 +20,19 @@ npm run playtest       # boots the game and runs all scenarios
 | Worst-case pathfinding (corner→corner) | per call | **0.20 ms** |
 | Movement + wall collision | held key | moves, **blocked by wall** ✅ |
 | Detection from line-of-sight | state | reaches **CHASE** (det 0.79) ✅ |
-| Reachability of keys/exit/hides/patrols | problems | **0** ✅ |
+| Reachability — **every registered level** | problems | **0** ✅ |
 | Ghost navigation entrance→basement | crossed / stalls | **reached, 0 stalls** ✅ |
+| Physics world bounds = world size | guard | ✅ |
+| Player can walk entrance→kitchen | traversal | ✅ |
 | Console / page errors | count | **0** ✅ |
+
+> The reachability check now runs against **every level in the `LEVELS`
+> registry** — it builds each level's NavGrid and confirms every key, hiding
+> spot, patrol point, and both spawns sit on open floor and are reachable from
+> the player start (the exit may hug an outer wall). A new level with a sealed
+> room or an item jammed against a wall fails the build. This caught two real
+> bugs in the example levels (an asylum divider that secretly split rooms, and a
+> cabin patrol point inside furniture padding) before they shipped.
 
 ## What the playtest found (and what was done)
 

@@ -57,7 +57,7 @@ per-frame CPU. See [PLAYTEST.md](PLAYTEST.md) for the latest results.
 ```bash
 npm install && npx playwright install chromium
 npm start                 # serve on :8000 (separate terminal)
-npm run playtest          # 11 checks
+npm run playtest          # 13 checks (incl. per-level reachability validation)
 ```
 
 ## Deploy to GitHub Pages
@@ -79,8 +79,13 @@ src/
   config.js                 # ALL tunable numbers live here
   main.js                   # boots Phaser
   audio/SoundManager.js     # synthesized placeholder sounds + clear hooks
+  levels/                   # LEVEL DATA — add a file here to add a level
+    LevelBuilder.js         # roomGrid(): dividers + doorway gaps -> walls
+    Levels.js               # the LEVELS registry + defineLevel()
+    houseLevel.js           # level 1 — the abandoned house (reference example)
+    asylumLevel.js          # level 2 — St. Mary Asylum
+    cabinLevel.js           # level 3 — The Lakeside Cabin
   world/
-    MapData.js              # the house layout (edit to redesign rooms)
     NavGrid.js              # ghost pathfinding + line-of-sight
   entities/
     Player.js               # movement, stamina, flashlight battery, noise
@@ -90,9 +95,123 @@ src/
   input/TouchControls.js    # mobile joystick + buttons
   ui/HUD.js                 # bars, prompts, messages, win/lose screen
   scenes/
-    TitleScene.js           # title + controls
-    GameScene.js            # the game loop
+    TitleScene.js           # title + level picker (built from the registry)
+    GameScene.js            # the game loop (reads the active level as data)
 ```
+
+> The engine reads levels as **data** from `src/levels/`. See
+> [ARCHITECTURE.md](ARCHITECTURE.md) for how the engine and the level data are
+> separated.
+
+## Creating a level
+
+Levels are **data**, not engine code. You add a map without touching the scenes,
+entities, or systems. Each level file describes a place and registers itself, so
+it auto-appears on the title screen and is auto-validated by the playtest.
+
+### Steps
+
+1. **Copy the reference level.** Duplicate `src/levels/houseLevel.js` to
+   `src/levels/<yourId>Level.js` and change the `id`, `name`, and the
+   coordinates (world size, dividers/gaps, furniture, keys, hiding spots,
+   spawns, exit, patrol points).
+2. **Load it.** Add one line inside the **LEVELS block** in `index.html`:
+
+   ```html
+   <script src="src/levels/<yourId>Level.js"></script>
+   ```
+
+   (Order within the LEVELS block doesn't matter — each level self-registers.)
+3. **Done.** It auto-appears on the title screen's level picker and is
+   auto-validated by `npm run playtest`.
+
+### Copy-paste template
+
+```js
+/*
+ * <yourId>Level.js — "<Your Level Name>".
+ *
+ * A level is pure data. Declare the dividers + their doorway gaps; the builder
+ * turns them into walls. Then drop furniture / keys / hiding spots / spawns on
+ * top and register it. All numbers are world pixels (top-left origin).
+ */
+
+LEVELS.register(defineLevel({
+  id: 'yourId',                 // unique, no spaces (must differ from other levels)
+  name: 'Your Level Name',      // shown on the title screen
+  world: { width: 1600, height: 1200 },
+
+  // Walls: declare interior dividers + their doorway gaps; the builder adds the
+  // outer border for you. vDividers = vertical walls at an x; hDividers =
+  // horizontal walls at a y. Each gap [from, to] is an open doorway.
+  layout: LevelBuilder.roomGrid({
+    world: { width: 1600, height: 1200 }, wall: 24,
+    vDividers: [
+      { x: 520,  gaps: [[250, 360], [840, 950]] },
+      { x: 1056, gaps: [[250, 360], [840, 950]] },
+    ],
+    hDividers: [
+      { y: 600, gaps: [[230, 340], [760, 870], [1230, 1340]] },
+    ],
+  }),
+
+  // Furniture = solid cover. It collides and blocks pathing — keep it OFF
+  // doorways, keys, hiding spots, and spawns.
+  furniture: [
+    { x: 760, y: 280, w: 90, h: 58 },   // example: a table
+  ],
+
+  // Faint room names, drawn above the darkness so you can orient yourself.
+  roomLabels: [
+    { x: 272, y: 312, text: 'ROOM A' },
+  ],
+
+  playerStart: { x: 180, y: 150 },      // where you spawn (open floor)
+  ghostStart:  { x: 660, y: 460 },      // where the ghost spawns (open floor)
+
+  exit: {
+    panel: { x: 1500, y: 850, w: 76, h: 110 }, // the door art (may hug a wall)
+    zone:  { x: 1538, y: 905, r: 46 },         // reach this with 3 keys to win
+  },
+
+  keys: [                               // EXACTLY 3 keys
+    { x: 1330, y: 175 },
+    { x: 175,  y: 1040 },
+    { x: 800,  y: 1045 },
+  ],
+
+  hidingSpots: [                        // 'closet' or 'bed'
+    { x: 1490, y: 120, type: 'closet' },
+    { x: 110,  y: 880, type: 'closet' },
+    { x: 970,  y: 1095, type: 'bed' },
+  ],
+
+  patrolPoints: [                       // ghost wander targets (open floor)
+    { x: 272, y: 160 }, { x: 800, y: 160 }, { x: 1328, y: 300 },
+    { x: 272, y: 900 }, { x: 800, y: 940 }, { x: 1328, y: 900 },
+  ],
+}));
+```
+
+### Validity rules
+
+The playtest (`npm run playtest`) checks these for **every** registered level,
+so a bad map fails the build:
+
+- **Doorway gaps ≥ 110px wide** so the player (and ghost) can fit through.
+- **Keys, hiding spots, patrol points, and both spawns must sit on open floor**
+  — at least ~45px clear of any wall or furniture — and be **reachable** from
+  the player start. (The NavGrid pads walls, so things crammed against a wall
+  read as "blocked.")
+- **Exactly 3 keys** (`CONFIG.keysToWin` is 3).
+- **The exit zone may hug an outer wall.** It's reached by proximity (radius
+  `zone.r`), not by standing on a nav cell, so it's allowed to sit on a blocked
+  cell — it only has to be reachable.
+- **Furniture must not block doorways** (or any key / hiding spot / spawn) —
+  furniture is solid cover and blocks both collision and pathing.
+
+If any of these fail, `npm run playtest` reports the offending level by `id` and
+which point (e.g. `key2`, `patrol6`) is the problem.
 
 ## Features
 
