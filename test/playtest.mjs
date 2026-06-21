@@ -136,20 +136,30 @@ async function main() {
   //    (The exit zone deliberately hugs the outer wall, so it is allowed
   //    to sit on a blocked nav cell — we only require it to be reachable.)
   // ---------------------------------------------------------------
+  //    Validates EVERY registered level, so any new level is auto-guarded.
   report.scenarios.reachability = await get(() => {
-    const s = game.scene.getScene('GameScene');
-    const start = MAP.playerStart;
-    const probe = (label, x, y, mustBeOpen) => {
-      const onOpenCell = !s.nav.isBlockedWorld(x, y);
-      const reachable = s.nav.findPath(start.x, start.y, x, y).length > 0;
-      return { label, onOpenCell, reachable, ok: reachable && (!mustBeOpen || onOpenCell) };
+    const checkLevel = (lvl) => {
+      const nav = new NavGrid(lvl.world.width, lvl.world.height, CONFIG.cell, lvl.walls, 14);
+      const start = lvl.playerStart;
+      const probe = (label, x, y, mustBeOpen) => {
+        const onOpenCell = !nav.isBlockedWorld(x, y);
+        const reachable = nav.findPath(start.x, start.y, x, y).length > 0;
+        return { label, onOpenCell, reachable, ok: reachable && (!mustBeOpen || onOpenCell) };
+      };
+      const out = [];
+      out.push(probe('playerStart', start.x, start.y, true));
+      out.push(probe('ghostStart', lvl.ghostStart.x, lvl.ghostStart.y, true));
+      lvl.keys.forEach((k, i) => out.push(probe('key' + (i + 1), k.x, k.y, true)));
+      out.push(probe('exit', lvl.exit.zone.x, lvl.exit.zone.y, false)); // wall-hug is fine
+      lvl.hidingSpots.forEach((h, i) => out.push(probe('hide' + (i + 1), h.x, h.y, true)));
+      lvl.patrolPoints.forEach((p, i) => out.push(probe('patrol' + (i + 1), p.x, p.y, true)));
+      return { id: lvl.id, checks: out.length, problems: out.filter(o => !o.ok) };
     };
-    const out = [];
-    MAP.keys.forEach((k, i) => out.push(probe('key' + (i + 1), k.x, k.y, true)));
-    out.push(probe('exit', MAP.exit.zone.x, MAP.exit.zone.y, false)); // wall-hug is fine
-    MAP.hidingSpots.forEach((h, i) => out.push(probe('hide' + (i + 1), h.x, h.y, true)));
-    MAP.patrolPoints.forEach((p, i) => out.push(probe('patrol' + (i + 1), p.x, p.y, true)));
-    return { count: out.length, problems: out.filter(o => !o.ok) };
+    const perLevel = LEVELS.all().map(checkLevel);
+    return {
+      levels: perLevel.map(l => ({ id: l.id, checks: l.checks, problemCount: l.problems.length })),
+      problems: perLevel.flatMap(l => l.problems.map(p => ({ level: l.id, ...p }))),
+    };
   });
 
   // ---------------------------------------------------------------
@@ -194,7 +204,7 @@ async function main() {
     for (let i = 0; i < 140; i++) await new Promise(r => requestAnimationFrame(r));
     s._gatherInput = () => ({ up: false, down: false, left: false, right: false, sprint: false });
     return {
-      worldBoundsMatch: wb.width === MAP.world.width && wb.height === MAP.world.height,
+      worldBoundsMatch: wb.width === s.level.world.width && wb.height === s.level.world.height,
       boundsW: wb.width, boundsH: wb.height,
       reachedKitchen: s.player.y > 720, endY: Math.round(s.player.y),
     };

@@ -166,7 +166,7 @@ class Ghost extends Phaser.Physics.Arcade.Image {
   _patrol(dt) {
     if (!this.patrolTarget ||
         Phaser.Math.Distance.Between(this.x, this.y, this.patrolTarget.x, this.patrolTarget.y) < 40) {
-      const pts = MAP.patrolPoints;
+      const pts = this.scene.level.patrolPoints;
       this.patrolTarget = pts[Phaser.Math.Between(0, pts.length - 1)];
     }
     this._followPathTo(this.patrolTarget.x, this.patrolTarget.y, CONFIG.ghost.patrolSpeed, dt);

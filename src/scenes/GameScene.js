@@ -15,11 +15,15 @@
 class GameScene extends Phaser.Scene {
   constructor() { super('GameScene'); }
 
-  create() {
+  create(data) {
     this.sfx = SFX;
     this.ended = false;
     this.won = false;
     this.chasing = false;
+
+    // The active level. TitleScene passes a levelId; otherwise use the first
+    // registered level. Everything below reads from `this.level`, never a global.
+    this.level = LEVELS.get((data && data.levelId) || LEVELS.defaultId());
 
     // --- gameplay state ---
     this.keysCollected = 0;
@@ -35,14 +39,14 @@ class GameScene extends Phaser.Scene {
     // size (960x600), NOT the world size. Without this, `collideWorldBounds`
     // traps the player in the top-left quarter of the map (they can't cross
     // y=600 or x=960 — the kitchen/storage/basement/exit become unreachable).
-    this.physics.world.setBounds(0, 0, MAP.world.width, MAP.world.height);
+    this.physics.world.setBounds(0, 0, this.level.world.width, this.level.world.height);
 
     // Navigation grid (used by the ghost for pathing + line of sight).
-    this.nav = new NavGrid(MAP.world.width, MAP.world.height, CONFIG.cell, MAP.walls, 14);
+    this.nav = new NavGrid(this.level.world.width, this.level.world.height, CONFIG.cell, this.level.walls, 14);
 
     // --- actors ---
-    this.player = new Player(this, MAP.playerStart.x, MAP.playerStart.y);
-    this.ghost = new Ghost(this, MAP.ghostStart.x, MAP.ghostStart.y, this.nav);
+    this.player = new Player(this, this.level.playerStart.x, this.level.playerStart.y);
+    this.ghost = new Ghost(this, this.level.ghostStart.x, this.level.ghostStart.y, this.nav);
 
     this.physics.add.collider(this.player, this.wallGroup);
     this.physics.add.collider(this.ghost, this.wallGroup);
@@ -51,14 +55,14 @@ class GameScene extends Phaser.Scene {
     });
 
     // --- camera ---
-    this.cameras.main.setBounds(0, 0, MAP.world.width, MAP.world.height);
+    this.cameras.main.setBounds(0, 0, this.level.world.width, this.level.world.height);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
     this.cameras.main.setBackgroundColor('#04050a');
 
     this._setupLighting();
     this._setupInput();
 
-    this.hud = new HUD(this, () => this.scene.restart());
+    this.hud = new HUD(this, () => this.scene.restart({ levelId: this.level.id }));
     this.touch = new TouchControls(this, {
       onFlashlight: () => this._toggleFlashlight(),
       onInteract: () => this._interact(),
@@ -187,18 +191,18 @@ class GameScene extends Phaser.Scene {
   }
 
   _buildWorld() {
-    const { width, height } = MAP.world;
+    const { width, height } = this.level.world;
     // Floor.
     this.add.rectangle(0, 0, width, height, 0x14171c).setOrigin(0).setDepth(-10);
     // Room labels — drawn ABOVE the darkness (faint) so you can orient yourself.
-    MAP.roomLabels.forEach(r =>
+    this.level.roomLabels.forEach(r =>
       this.add.text(r.x, r.y, r.text, {
         fontFamily: 'monospace', fontSize: '14px', color: '#5b6675',
       }).setOrigin(0.5).setDepth(1090).setAlpha(0.16));
 
     // Walls (solid). Furniture is lighter/warmer so it stands out from the floor.
     this.wallGroup = this.physics.add.staticGroup();
-    MAP.walls.forEach(w => {
+    this.level.walls.forEach(w => {
       const isFurn = w.type === 'furniture';
       const rect = this.add.rectangle(w.x, w.y, w.w, w.h, isFurn ? 0x4a3a26 : 0x363c47)
         .setOrigin(0).setDepth(isFurn ? 11 : 10);
@@ -211,7 +215,7 @@ class GameScene extends Phaser.Scene {
     // invisible (no more bumping into furniture you can't see). Furniture
     // glows a little; perimeter/divider walls are only a whisper to stay moody.
     const edges = this.add.graphics().setDepth(1100);
-    MAP.walls.forEach(w => {
+    this.level.walls.forEach(w => {
       const furn = w.type === 'furniture';
       edges.lineStyle(furn ? 3 : 1, furn ? 0xb08a4e : 0x49555f, furn ? 0.55 : 0.1);
       edges.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
@@ -219,13 +223,13 @@ class GameScene extends Phaser.Scene {
 
     // Exit door panel (locked until 3 keys) + an above-darkness marker so it's
     // findable from across the room (turns green once unlocked).
-    const ex = MAP.exit.panel;
+    const ex = this.level.exit.panel;
     this.exitPanel = this.add.rectangle(ex.x, ex.y, ex.w, ex.h, 0x5a2222)
       .setOrigin(0).setDepth(12).setStrokeStyle(3, 0x8a3333);
     this.exitLabel = this.add.text(ex.x + ex.w / 2, ex.y - 12, 'EXIT', {
       fontFamily: 'monospace', fontSize: '13px', color: '#c87070',
     }).setOrigin(0.5).setDepth(1151);
-    this.exitMarker = this.add.image(MAP.exit.zone.x, MAP.exit.zone.y, 'glow')
+    this.exitMarker = this.add.image(this.level.exit.zone.x, this.level.exit.zone.y, 'glow')
       .setDepth(1150).setAlpha(0.5).setTint(0xff5a5a).setDisplaySize(120, 140)
       .setBlendMode(Phaser.BlendModes.ADD);
     this.tweens.add({ targets: this.exitMarker, alpha: 0.85, duration: 1000,
@@ -233,10 +237,10 @@ class GameScene extends Phaser.Scene {
 
     // Keys.
     this.keysGroup = this.physics.add.group();
-    MAP.keys.forEach(k => this.keysGroup.add(new CollectibleKey(this, k.x, k.y)));
+    this.level.keys.forEach(k => this.keysGroup.add(new CollectibleKey(this, k.x, k.y)));
 
     // Hiding spots.
-    this.hidingSpots = MAP.hidingSpots.map(h => new HidingSpot(this, h.x, h.y, h.type));
+    this.hidingSpots = this.level.hidingSpots.map(h => new HidingSpot(this, h.x, h.y, h.type));
   }
 
   _setupLighting() {
@@ -264,7 +268,7 @@ class GameScene extends Phaser.Scene {
       const muted = this.sfx.toggleMute();
       this.hud.setMessage(muted ? 'Sound off' : 'Sound on', 1);
     });
-    kb.on('keydown-R', () => this.scene.restart());
+    kb.on('keydown-R', () => this.scene.restart({ levelId: this.level.id }));
   }
 
   // ===================================================================
@@ -452,7 +456,7 @@ class GameScene extends Phaser.Scene {
   }
 
   _checkExit() {
-    const z = MAP.exit.zone;
+    const z = this.level.exit.zone;
     const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, z.x, z.y);
     if (d > z.r) return;
     if (this.keysCollected >= CONFIG.keysToWin) {

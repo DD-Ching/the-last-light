@@ -50,17 +50,28 @@
     if (!window.Phaser) document.getElementById('fallback').style.display = 'block';
   </script>
 
-  <!-- Game source. Order matters: config + helpers first, scenes, then main. -->
+  <!-- Game source. Order matters: helpers → level system → levels → entities
+       → ui → scenes → main. To add a level, drop its <script> in the LEVELS
+       block below (order within the block doesn't matter). -->
   <script src="src/config.js"></script>
   <script src="src/audio/SoundManager.js"></script>
-  <script src="src/world/MapData.js"></script>
   <script src="src/world/NavGrid.js"></script>
+
+  <!-- Level system -->
+  <script src="src/levels/LevelBuilder.js"></script>
+  <script src="src/levels/Levels.js"></script>
+  <!-- LEVELS: add new level files here (each self-registers) -->
+  <script src="src/levels/houseLevel.js"></script>
+
+  <!-- Entities / UI -->
   <script src="src/entities/Player.js"></script>
   <script src="src/entities/Ghost.js"></script>
   <script src="src/entities/CollectibleKey.js"></script>
   <script src="src/entities/HidingSpot.js"></script>
   <script src="src/input/TouchControls.js"></script>
   <script src="src/ui/HUD.js"></script>
+
+  <!-- Scenes + boot -->
   <script src="src/scenes/TitleScene.js"></script>
   <script src="src/scenes/GameScene.js"></script>
   <script src="src/main.js"></script>
