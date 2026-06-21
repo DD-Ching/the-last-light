@@ -121,8 +121,11 @@ async function main() {
     s.__catch = s._checkCatch; s._checkCatch = () => {};   // invulnerable for the test
     s.player.setPosition(270, 300); s.player.flashlightOn = false;
     s.ghost.setPosition(460, 300); s.ghost.detection = 0; s.ghost._enter('PATROL');
+    // Window is generous: on a slow headless connection the game runs at low
+    // fps and dt is clamped, so wall-clock time buys less game-time; a real
+    // 60fps browser reaches CHASE in ~1.5s.
     const t0 = performance.now(); let becameChase = false, maxDet = 0;
-    while (performance.now() - t0 < 3000) {
+    while (performance.now() - t0 < 6000) {
       await new Promise(r => requestAnimationFrame(r));
       maxDet = Math.max(maxDet, s.ghost.detection);
       if (s.ghost.state === 'CHASE') { becameChase = true; break; }
